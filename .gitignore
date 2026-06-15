@@ -1,0 +1,14 @@
+# NEVER commit real secrets or local junk
+group_vars/vault.yml
+*.vault
+vault-password*
+.vault_pass*
+*.retry
+*.log
+__pycache__/
+*.pyc
+/tmp/
+.DS_Store
+# local answer-file build artifacts (contain plaintext Administrator/DSRM passwords)
+*-answer/
+*-answer.iso

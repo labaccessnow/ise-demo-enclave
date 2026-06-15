@@ -1,0 +1,20 @@
+---
+# Copy to group_vars/vault.yml, fill in REAL values, then:
+#     ansible-vault encrypt group_vars/vault.yml
+# vault.yml is gitignored. NEVER commit real secrets.
+
+# Proxmox API token (Datacenter -> Permissions -> API Tokens)
+vault_proxmox_api_user: "automation@pve"
+vault_proxmox_api_token_id: "ansible"
+vault_proxmox_api_token_secret: "CHANGEME-uuid-token-secret"
+
+# Windows local Administrator password (also becomes the demo.lab domain admin)
+# Must meet AD complexity (>=3 of 4 char classes).
+vault_win_admin_password: "CHANGEME-Win-Admin-Pass1!"
+
+# Directory Services Restore Mode password (forest recovery)
+vault_win_dsrm_password: "CHANGEME-Dsrm-Pass1!"
+
+# Cisco ISE CLI admin password. ISE complexity: >=6 chars, upper+lower+digit, a
+# special, no dictionary words, cannot contain the username.
+vault_ise_cli_password: "CHANGEME-Ise-Cli-Pass1!"

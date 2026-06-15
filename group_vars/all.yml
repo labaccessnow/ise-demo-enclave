@@ -1,0 +1,42 @@
+---
+# ============================================================================
+# Non-secret configuration. EDIT THESE for your environment.
+# Secrets live in group_vars/vault.yml (see vault.example.yml).
+# ============================================================================
+
+# --- Proxmox target ----------------------------------------------------------
+proxmox_api_host: "pve.example.lab"     # Proxmox host/IP (API + SSH)
+proxmox_node:     "pve"                  # the PVE node name
+proxmox_ssh_user: "root"                 # used only to build the answer ISO + ISE serial
+proxmox_storage:  "local-lvm"            # where VM disks go (a fast SSD tier ideally)
+proxmox_iso_store: "local"               # storage that holds the ISOs (content=iso)
+proxmox_iso_path:  "/var/lib/vz/template/iso"   # filesystem path of that ISO store on the node
+
+# secrets pulled from the (vault-encrypted) group_vars/vault.yml
+proxmox_api_user:         "{{ vault_proxmox_api_user }}"          # e.g. automation@pve
+proxmox_api_token_id:     "{{ vault_proxmox_api_token_id }}"      # e.g. ansible
+proxmox_api_token_secret: "{{ vault_proxmox_api_token_secret }}"
+
+# --- Enclave network (isolated; route to prod is intentionally NOT required) --
+enclave_vlan:    1800
+enclave_bridge:  "vmbr1"                 # the bridge/SDN-vnet carrying the VLAN to your switch
+enclave_cidr:    "0.0.0.0/24"
+enclave_netmask: "255.255.255.0"
+enclave_prefix:  24
+enclave_gateway: "0.0.0.0"             # an SVI/subinterface you create on your L3 switch/router
+
+# --- AD / DNS / NTP all live on the demo DC (new, isolated forest) ------------
+ad_domain:   "demo.lab"
+ad_netbios:  "DEMO"
+dc_ip:       "0.0.0.0"
+ise_ip:      "0.0.0.0"
+dns_server:  "0.0.0.0"
+ntp_server:  "0.0.0.0"
+timezone_win: "UTC"
+timezone_ise: "UTC"
+
+# --- secrets (defined in vault.yml) ------------------------------------------
+win_admin_password: "{{ vault_win_admin_password }}"
+win_dsrm_password:  "{{ vault_win_dsrm_password }}"
+ise_cli_user:       "admin"
+ise_cli_password:   "{{ vault_ise_cli_password }}"

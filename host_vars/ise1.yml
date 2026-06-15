@@ -1,0 +1,32 @@
+---
+# Cisco ISE 3.4 node. Same vm_spec schema as dc-demo -> one role provisions either.
+role: ise
+ip: "{{ ise_ip }}"
+
+vm_spec:
+  vmid: 125
+  name: "ise1"
+  cores: 4                 # ISE eval installer hard-checks CPU/RAM/disk or it aborts
+  memory: 16384
+  bios: "seabios"
+  ostype: "l26"
+  scsihw: "virtio-scsi-single"
+  disk_bus: "scsi"         # virtio-scsi; an SSD tier clears ISE's 50/300 MB-s disk gate
+  disk_gb: 300             # ISE 3.4 minimum
+  nic_model: "e1000"       # e1000 detected natively; the virtio NIC is NOT seen by the ISE installer
+  install_iso: "ise-3.4.0.608b.SPA.x86_64.iso"
+  build_answer_iso: false  # ISE has no autounattend; the setup wizard is driven over serial
+  serial: true             # add serial0 socket so files/ise_serial.py can drive setup
+  boot_order: "ide2;scsi0" # ISO first to install; then DETACH ISO + set order=scsi0 (see GOTCHAS)
+
+# Answers used by files/ise_serial.py `drive` (ISE first-boot setup wizard).
+ise_setup:
+  hostname: "ise1"
+  ip: "{{ ise_ip }}"
+  netmask: "{{ enclave_netmask }}"
+  gateway: "{{ enclave_gateway }}"
+  dns_domain: "{{ ad_domain }}"
+  nameserver: "{{ dns_server }}"
+  ntp_server: "{{ ntp_server }}"
+  timezone: "{{ timezone_ise }}"
+  enable_ssh: true

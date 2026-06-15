@@ -1,0 +1,97 @@
+---
+# Create ONE Proxmox VM from `vm_spec` — identical task for the Win DC and ISE.
+# All API calls run on the control machine (localhost) against the PVE node.
+
+- name: Disk parameter ({{ vm_spec.disk_bus }}0)
+  ansible.builtin.set_fact:
+    _disk_key: "{{ vm_spec.disk_bus }}0"
+    _disk_val: "{{ proxmox_storage }}:{{ vm_spec.disk_gb }},format=qcow2,ssd=1"
+
+- name: Assemble CD-ROM drives (install ISO always; answer + virtio for Windows)
+  ansible.builtin.set_fact:
+    _ide: >-
+      {{ {'ide2': proxmox_iso_store ~ ':iso/' ~ vm_spec.install_iso ~ ',media=cdrom'}
+         | combine({'ide0': proxmox_iso_store ~ ':iso/' ~ vm_spec.name ~ '-answer.iso,media=cdrom'} if vm_spec.build_answer_iso | default(false) else {})
+         | combine({'ide1': proxmox_iso_store ~ ':iso/virtio-win.iso,media=cdrom'} if vm_spec.build_answer_iso | default(false) else {}) }}
+
+# --- Windows only: render answer files + build the labelled answer ISO ---------
+- name: Render Windows unattend + post-install scripts (local)
+  when: vm_spec.build_answer_iso | default(false)
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "/tmp/{{ vm_spec.name }}-answer/{{ item }}"
+    mode: "0644"
+  loop: [autounattend.xml, setup-dc.ps1, phase2.ps1]
+  no_log: true        # the rendered files contain the Administrator + DSRM passwords
+
+- name: Copy answer files to the PVE node
+  when: vm_spec.build_answer_iso | default(false)
+  ansible.builtin.copy:
+    src: "/tmp/{{ vm_spec.name }}-answer/"
+    dest: "/tmp/{{ vm_spec.name }}-answer/"
+  delegate_to: "{{ proxmox_api_host }}"
+  vars:
+    ansible_user: "{{ proxmox_ssh_user }}"
+  no_log: true
+
+- name: Build the labelled answer ISO on the PVE node (label WINANSWER)
+  when: vm_spec.build_answer_iso | default(false)
+  delegate_to: "{{ proxmox_api_host }}"
+  vars:
+    ansible_user: "{{ proxmox_ssh_user }}"
+  ansible.builtin.command:
+    cmd: >-
+      genisoimage -quiet -o {{ proxmox_iso_path }}/{{ vm_spec.name }}-answer.iso
+      -V WINANSWER -J -r /tmp/{{ vm_spec.name }}-answer/
+    creates: "{{ proxmox_iso_path }}/{{ vm_spec.name }}-answer.iso"
+
+# --- Create the VM (identical for both; only vm_spec differs) ------------------
+- name: "Create VM {{ vm_spec.vmid }} ({{ vm_spec.name }})"
+  delegate_to: localhost
+  community.proxmox.proxmox_kvm:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    node: "{{ proxmox_node }}"
+    vmid: "{{ vm_spec.vmid }}"
+    name: "{{ vm_spec.name }}"
+    cores: "{{ vm_spec.cores }}"
+    sockets: 1
+    cpu: host
+    numa: true
+    memory: "{{ vm_spec.memory }}"
+    balloon: 0
+    bios: "{{ vm_spec.bios }}"
+    ostype: "{{ vm_spec.ostype }}"
+    scsihw: "{{ vm_spec.scsihw }}"
+    scsi: "{{ {_disk_key: _disk_val} if vm_spec.disk_bus == 'scsi' else omit }}"
+    sata: "{{ {_disk_key: _disk_val} if vm_spec.disk_bus == 'sata' else omit }}"
+    ide: "{{ _ide }}"
+    net: { net0: "{{ vm_spec.nic_model }},bridge={{ enclave_bridge }},tag={{ enclave_vlan }}" }
+    serial: "{{ {'serial0': 'socket'} if vm_spec.serial | default(false) else omit }}"
+    boot: "order={{ vm_spec.boot_order }}"
+    agent: "{{ 'enabled=1' if vm_spec.build_answer_iso | default(false) else omit }}"
+    onboot: false
+    state: present
+
+- name: "Start VM {{ vm_spec.vmid }}"
+  when: vm_autostart | default(true)
+  delegate_to: localhost
+  community.proxmox.proxmox_kvm:
+    api_host: "{{ proxmox_api_host }}"
+    api_user: "{{ proxmox_api_user }}"
+    api_token_id: "{{ proxmox_api_token_id }}"
+    api_token_secret: "{{ proxmox_api_token_secret }}"
+    node: "{{ proxmox_node }}"
+    vmid: "{{ vm_spec.vmid }}"
+    state: started
+
+- name: Next steps
+  ansible.builtin.debug:
+    msg: >-
+      {{ vm_spec.name }} ({{ vm_spec.vmid }}) created + started.
+      {% if role == 'ise' %}AFTER the ISE OS install reboots, DETACH the install ISO to avoid the
+      ISOLINUX auto-reinstall trap:  qm set {{ vm_spec.vmid }} --delete ide2 --boot order=scsi0
+      then drive setup with files/ise_serial.py (see README).{% else %}Windows installs unattended
+      and promotes {{ ad_domain }} (~25 min); verify with nslookup ise1.{{ ad_domain }}.{% endif %}
