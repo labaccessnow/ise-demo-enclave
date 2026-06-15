@@ -12,3 +12,6 @@ __pycache__/
 # local answer-file build artifacts (contain plaintext Administrator/DSRM passwords)
 *-answer/
 *-answer.iso
+# MkDocs build output + local docs venv
+/site/
+/.venv/

@@ -1,0 +1,68 @@
+site_name: ISE Demo Enclave
+site_description: >-
+  Ansible to stand up a self-contained Cisco ISE 3.4 + Windows Server 2025
+  Active Directory lab on Proxmox — one role provisions both VMs.
+site_url: https://github.labaccessnow.com/ise-demo-enclave/
+repo_url: https://github.com/labaccessnow/ise-demo-enclave
+repo_name: labaccessnow/ise-demo-enclave
+edit_uri: edit/main/docs/
+copyright: MIT-licensed lab tool — no warranty.
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.sections
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - toc.follow
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Quick Start: quick-start.md
+  - Configuration: configuration.md
+  - How the Role Works: how-the-role-works.md
+  - Gotchas: GOTCHAS.md
+  - Architecture: architecture.md
