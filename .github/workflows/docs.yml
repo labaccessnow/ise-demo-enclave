@@ -32,6 +32,13 @@ jobs:
         run: pip install mkdocs-material
       - name: Build site
         run: mkdocs build --clean   # outputs ./site
+      - name: Deploy to VPS (github.labaccessnow.com mirror)
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_DEPLOY_SSH_KEY }}" > ~/.ssh/deploy && chmod 600 ~/.ssh/deploy
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          rsync -az --delete -e "ssh -i ~/.ssh/deploy -o StrictHostKeyChecking=yes" \
+            site/ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:ise-demo-enclave/"
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
